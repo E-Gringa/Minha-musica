@@ -1,0 +1,17 @@
+{
+  "name": "Minha Música",
+  "short_name": "Minha Música",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#101510",
+  "theme_color": "#101510",
+  "description": "Player gratuito para arquivos de áudio livres.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

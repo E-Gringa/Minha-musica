@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101510">
+  <title>Minha Música</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    :root{color-scheme:dark;--bg:#101510;--panel:#1b241d;--green:#1ed760;--muted:#a9b4aa}
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(160deg,#1b2c20,#101510 45%);color:#fff;font:16px system-ui,-apple-system,sans-serif;min-height:100vh}
+    main{max-width:760px;margin:auto;padding:28px 18px 170px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:24px} .logo{width:42px;height:42px;border-radius:50%;background:var(--green);display:grid;place-items:center;color:#102014;font-size:22px;font-weight:900}
+    h1{font-size:25px;margin:0} .sub{color:var(--muted);font-size:13px;margin-top:3px}
+    .search{display:flex;gap:8px;margin:22px 0} input{min-width:0;flex:1;border:0;border-radius:14px;padding:15px;background:#fff;color:#111;font-size:16px}
+    button{border:0;border-radius:14px;padding:13px 16px;background:var(--green);color:#102014;font-weight:750;font-size:15px}
+    .note{background:#202b22;border:1px solid #344437;border-radius:14px;padding:13px;color:#c9d4ca;font-size:13px;line-height:1.45}
+    #results{display:grid;gap:10px;margin-top:18px}.track{display:flex;align-items:center;gap:12px;padding:12px;background:rgba(27,36,29,.92);border-radius:15px}
+    .art{width:48px;height:48px;border-radius:10px;background:#344437;display:grid;place-items:center;font-size:22px;flex:none}
+    .meta{min-width:0;flex:1}.title{font-weight:700;overflow-wrap:anywhere}.artist{color:var(--muted);font-size:13px;margin-top:3px}
+    .play{width:44px;height:44px;border-radius:50%;padding:0;font-size:18px;flex:none}
+    .empty{color:var(--muted);text-align:center;padding:30px 10px}
+    footer{position:fixed;bottom:0;left:0;right:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(10,15,11,.96);border-top:1px solid #29342b;backdrop-filter:blur(12px)}
+    .player{max-width:760px;margin:auto;display:flex;align-items:center;gap:12px}.now{min-width:0;flex:1}.now strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.now small{color:var(--muted)}
+    audio{width:100%;height:34px;margin-top:6px}
+    a{color:var(--green)} .smallprint{font-size:11px;color:#879489;margin-top:10px}
+  </style>
+</head>
+<body>
+<main>
+  <header><div class="logo">♫</div><div><h1>Minha Música</h1><div class="sub">Seu player gratuito de áudio livre</div></div></header>
+  <div class="note">Pesquise gravações de áudio disponíveis no Wikimedia Commons. Cada arquivo pode ter uma licença diferente; confira a página da faixa antes de reutilizar ou compartilhar.</div>
+  <form class="search" id="searchForm"><input id="query" placeholder="Buscar música, artista ou áudio..." aria-label="Buscar áudio"><button type="submit">Buscar</button></form>
+  <div id="status" class="sub">Experimente pesquisar um artista, instrumento ou estilo musical.</div>
+  <section id="results"><div class="empty">Suas músicas encontradas aparecerão aqui.</div></section>
+  <p class="smallprint">Este protótipo usa arquivos de mídia do Wikimedia Commons; não contém o catálogo do Spotify nem garante encontrar músicas comerciais conhecidas.</p>
+</main>
+<footer><div class="player"><div class="art">♫</div><div class="now"><strong id="nowTitle">Nada tocando</strong><small id="nowArtist">Escolha uma faixa para começar</small><audio id="audio" controls preload="none"></audio></div></div></footer>
+<script>
+const form=document.querySelector('#searchForm'), query=document.querySelector('#query'), results=document.querySelector('#results'), statusEl=document.querySelector('#status');
+const audio=document.querySelector('#audio'), nowTitle=document.querySelector('#nowTitle'), nowArtist=document.querySelector('#nowArtist');
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function search(q){
+  statusEl.textContent='Procurando arquivos de áudio...'; results.innerHTML='';
+  const api='https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent('filetype:audio '+q)+'&gsrnamespace=6&gsrlimit=18&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=100&format=json&origin=*';
+  try{
+    const r=await fetch(api); if(!r.ok) throw new Error('Falha na busca'); const data=await r.json();
+    const pages=Object.values(data.query?.pages||{}).filter(p=>p.imageinfo?.[0]?.url);
+    if(!pages.length){statusEl.textContent='Nenhum áudio encontrado. Tente outro termo.';results.innerHTML='<div class="empty">Nenhum resultado por enquanto.</div>';return;}
+    statusEl.textContent=pages.length+' arquivo(s) encontrado(s).';
+    pages.forEach(p=>{
+      const info=p.imageinfo[0], meta=info.extmetadata||{}, artist=(meta.Artist?.value||'Wikimedia Commons').replace(/<[^>]*>/g,' ');
+      const license=meta.LicenseShortName?.value||'Licença não identificada';
+      const name=p.title.replace(/^File:/,'').replace(/\.[^.]+$/,'').replaceAll('_',' ');
+      const card=document.createElement('article');card.className='track';
+      card.innerHTML=`<div class="art">♫</div><div class="meta"><div class="title">${esc(name)}</div><div class="artist">${esc(artist)} · ${esc(license)}</div><div class="artist"><a href="https://commons.wikimedia.org/wiki/${encodeURIComponent(p.title.replaceAll(' ','_'))}" target="_blank" rel="noopener">Ver licença e detalhes</a></div></div><button class="play" aria-label="Tocar">▶</button>`;
+      card.querySelector('button').addEventListener('click',()=>{audio.src=info.url;audio.play().catch(()=>{statusEl.textContent='Toque novamente no botão de reprodução para iniciar o áudio.'});nowTitle.textContent=name;nowArtist.textContent=artist;});
+      results.appendChild(card);
+    });
+  }catch(e){statusEl.textContent='Não foi possível buscar agora. Verifique sua conexão e tente novamente.';results.innerHTML='<div class="empty">Erro ao carregar resultados.</div>';}
+}
+form.addEventListener('submit',e=>{e.preventDefault();const q=query.value.trim();if(q)search(q);});
+if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
